@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: API-GATEWAY
+
+  config:
+    import: optional:configserver:http://localhost:8888
+
+  profiles:
+    active: local
+
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-name: true
+      routes:
+        - id: user-service
+          uri: lb://USER-SERVICE
+          predicates:
+            - Path=/revplay/auth/**
+        - id: catalog-service
+          uri: lb://CATALOG-SERVICE
+          predicates:
+            - Path=/revplay/catalog/**
+        - id: playlist-service
+          uri: lb://PLAYLIST-SERVICE
+          predicates:
+            - Path=/revplay/playlists/**
+        - id: favorites-service
+          uri: lb://FAVORITES-SERVICE
+          predicates:
+            - Path=/revplay/favorites/**
+        - id: analytics-service
+          uri: lb://ANALYTICS-SERVICE
+          predicates:
+            - Path=/revplay/analytics/**
+        - id: playback-service
+          uri: lb://PLAYBACK-SERVICE
+          predicates:
+            - Path=/revplay/playback/**
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:4200"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowedHeaders:
+              - "*"
+            allowCredentials: true

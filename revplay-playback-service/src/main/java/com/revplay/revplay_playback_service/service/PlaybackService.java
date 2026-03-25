@@ -1,0 +1,309 @@
+package com.revplay.revplay_playback_service.service;
+
+import com.revplay.revplay_playback_service.Enum.RepeatMode;
+import com.revplay.revplay_playback_service.client.AnalyticsClient;
+import com.revplay.revplay_playback_service.client.CatalogClient;
+import com.revplay.revplay_playback_service.dto.request.AddToQueueRequest;
+import com.revplay.revplay_playback_service.dto.request.TrackPlayRequest;
+import com.revplay.revplay_playback_service.dto.response.SongResponse;
+import com.revplay.revplay_playback_service.model.ListeningHistory;
+import com.revplay.revplay_playback_service.model.PlaybackState;
+import com.revplay.revplay_playback_service.model.QueueSong;
+import com.revplay.revplay_playback_service.repository.ListeningHistoryRepository;
+import com.revplay.revplay_playback_service.repository.PlaybackStateRepository;
+import com.revplay.revplay_playback_service.repository.QueueRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class PlaybackService {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PlaybackService.class);
+
+    private final QueueRepository queueRepository;
+    private final CatalogClient catalogClient;
+    private final AnalyticsClient analyticsClient;
+    private final PlaybackStateRepository playbackStateRepository;
+    private final ListeningHistoryRepository historyRepository;
+
+    public PlaybackService(QueueRepository queueRepository, CatalogClient catalogClient, AnalyticsClient analyticsClient, PlaybackStateRepository playbackStateRepository, ListeningHistoryRepository historyRepository) {
+        this.queueRepository = queueRepository;
+        this.catalogClient = catalogClient;
+        this.analyticsClient = analyticsClient;
+        this.playbackStateRepository = playbackStateRepository;
+        this.historyRepository = historyRepository;
+    }
+
+    public QueueSong addToQueue(Long userId, AddToQueueRequest request) {
+
+        int position = queueRepository.countByUserId(userId) + 1;
+
+        QueueSong queueSong = QueueSong.builder()
+                .userId(userId)
+                .songId(request.getSongId())
+                .position(position)
+                .build();
+
+        return queueRepository.save(queueSong);
+    }
+
+    public List<Object> getQueue(Long userId) {
+
+        List<QueueSong> queue = queueRepository
+                .findByUserIdOrderByPositionAsc(userId);
+
+        List<Long> songIds = queue.stream()
+                .map(QueueSong::getSongId)
+                .toList();
+
+        return catalogClient.getSongsByIds(songIds);
+    }
+
+    public void removeFromQueue(Long userId, Long songId) {
+        List<QueueSong> matches = queueRepository.findByUserIdAndSongId(userId, songId);
+        if (matches.isEmpty()) {
+            throw new RuntimeException("Song not in queue");
+        }
+
+        QueueSong queueSong = matches.get(0);
+        int removedPosition = queueSong.getPosition();
+
+        queueRepository.delete(queueSong);
+
+        // reorder remaining songs
+        List<QueueSong> songs = queueRepository.findByUserIdOrderByPositionAsc(userId);
+
+        for (QueueSong song : songs) {
+            if (song.getPosition() > removedPosition) {
+                song.setPosition(song.getPosition() - 1);
+                queueRepository.save(song);
+            }
+        }
+    }
+
+    @Transactional
+    public void clearQueue(Long userId) {
+
+        queueRepository.deleteByUserId(userId);
+
+    }
+
+    public void playSong(Long userId, Long songId) {
+
+        log.info("Playing song {} for user {}", songId, userId);
+
+        PlaybackState state = getOrCreatePlaybackState(userId);
+
+        state.setCurrentSongId(songId);
+        state.setPlaying(true);
+
+        playbackStateRepository.save(state);
+
+        saveOrUpdateHistory(userId, songId);
+
+        SongResponse song = catalogClient.getSong(songId);
+
+        TrackPlayRequest request = TrackPlayRequest.builder()
+                .songId(songId)
+                .artistId(song.getArtistId())
+                .userId(userId)
+                .build();
+
+        analyticsClient.trackPlay(request);
+    }
+
+    public void pauseSong(Long userId) {
+
+        PlaybackState state = getOrCreatePlaybackState(userId);
+
+        state.setPlaying(false);
+
+        playbackStateRepository.save(state);
+    }
+
+    public void playNext(Long userId) {
+        PlaybackState state = getOrCreatePlaybackState(userId);
+        
+        List<QueueSong> matches = queueRepository.findByUserIdAndSongId(userId, state.getCurrentSongId());
+        if (matches.isEmpty()) {
+            throw new RuntimeException("Current song not in queue");
+        }
+        
+        QueueSong current = matches.get(0);
+
+        QueueSong nextSong = queueRepository
+                .findFirstByUserIdAndPositionGreaterThanOrderByPositionAsc(
+                        userId,
+                        current.getPosition()
+                )
+                .orElseThrow(() -> new RuntimeException("No next song in queue"));
+
+        state.setCurrentSongId(nextSong.getSongId());
+        state.setPlaying(true);
+
+        playbackStateRepository.save(state);
+
+        saveOrUpdateHistory(userId, nextSong.getSongId());
+    }
+
+    public void playPrevious(Long userId) {
+        PlaybackState state = getOrCreatePlaybackState(userId);
+
+        List<QueueSong> matches = queueRepository.findByUserIdAndSongId(userId, state.getCurrentSongId());
+        if (matches.isEmpty()) {
+            throw new RuntimeException("Current song not in queue");
+        }
+        
+        QueueSong current = matches.get(0);
+
+        QueueSong previousSong = queueRepository
+                .findFirstByUserIdAndPositionLessThanOrderByPositionDesc(
+                        userId,
+                        current.getPosition()
+                )
+                .orElseThrow(() -> new RuntimeException("No previous song in queue"));
+
+        state.setCurrentSongId(previousSong.getSongId());
+        state.setPlaying(true);
+
+        playbackStateRepository.save(state);
+
+        saveOrUpdateHistory(userId, previousSong.getSongId());
+    }
+
+    public void toggleShuffle(Long userId) {
+
+        PlaybackState state = getOrCreatePlaybackState(userId);
+
+        boolean newShuffleState = !state.isShuffleEnabled();
+
+        state.setShuffleEnabled(newShuffleState);
+
+        playbackStateRepository.save(state);
+
+        if (newShuffleState) {
+
+            List<QueueSong> queue = queueRepository.findByUserIdOrderByPositionAsc(userId);
+
+            Collections.shuffle(queue);
+
+            int position = 1;
+
+            for (QueueSong song : queue) {
+
+                song.setPosition(position++);
+
+            }
+
+            queueRepository.saveAll(queue);
+        }
+    }
+
+    public void updateRepeatMode(Long userId, RepeatMode repeatMode) {
+
+        PlaybackState state = getOrCreatePlaybackState(userId);
+
+        state.setRepeatMode(repeatMode);
+
+        playbackStateRepository.save(state);
+    }
+
+    public Page<Object> getListeningHistory(Long userId, Pageable pageable) {
+
+        Page<ListeningHistory> historyPage =
+                historyRepository.findByUserIdOrderByPlayedAtDesc(userId, pageable);
+
+        List<Long> songIds = historyPage.getContent()
+                .stream()
+                .map(ListeningHistory::getSongId)
+                .collect(Collectors.toList());
+
+        List<Object> songs = catalogClient.getSongsByIds(songIds);
+
+        return new PageImpl<>(songs, pageable, historyPage.getTotalElements());
+    }
+
+
+    public List<Object> getRecentlyPlayed(Long userId) {
+
+        List<ListeningHistory> history =
+                historyRepository.findTop20ByUserIdOrderByPlayedAtDesc(userId);
+
+        List<Long> songIds = history.stream()
+                .map(ListeningHistory::getSongId)
+                .collect(Collectors.toList());
+
+        return catalogClient.getSongsByIds(songIds);
+    }
+
+    @Transactional
+    public void clearHistory(Long userId) {
+
+        historyRepository.deleteByUserId(userId);
+
+    }
+
+    private void saveOrUpdateHistory(Long userId, Long songId) {
+        List<ListeningHistory> matches = historyRepository.findByUserIdAndSongId(userId, songId);
+        
+        ListeningHistory history;
+        if (matches.isEmpty()) {
+            history = ListeningHistory.builder()
+                    .userId(userId)
+                    .songId(songId)
+                    .playedAt(java.time.LocalDateTime.now())
+                    .build();
+        } else {
+            // If multiple, log and keep the first one
+            if (matches.size() > 1) {
+                log.warn("Found {} duplicate history records for user {} and song {}. Cleaning up...", matches.size(), userId, songId);
+                for (int i = 1; i < matches.size(); i++) {
+                    historyRepository.delete(matches.get(i));
+                }
+            }
+            history = matches.get(0);
+            history.setPlayedAt(java.time.LocalDateTime.now());
+        }
+        
+        historyRepository.save(history);
+    }
+
+    public Long getPlayCount(Long userId) {
+
+        return historyRepository.countByUserId(userId);
+
+    }
+
+    private PlaybackState getOrCreatePlaybackState(Long userId) {
+        List<PlaybackState> states = playbackStateRepository.findAll().stream()
+                .filter(s -> s.getUserId().equals(userId))
+                .collect(Collectors.toList());
+
+        if (states.isEmpty()) {
+            return PlaybackState.builder()
+                    .userId(userId)
+                    .shuffleEnabled(false)
+                    .repeatMode(RepeatMode.OFF)
+                    .build();
+        }
+
+        if (states.size() > 1) {
+            log.warn("Found {} duplicate playback states for user {}. Cleaning up...", states.size(), userId);
+            // Keep the first one, delete others
+            PlaybackState keep = states.get(0);
+            for (int i = 1; i < states.size(); i++) {
+                playbackStateRepository.delete(states.get(i));
+            }
+            return keep;
+        }
+
+        return states.get(0);
+    }
+}

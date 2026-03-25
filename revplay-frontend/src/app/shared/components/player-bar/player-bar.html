@@ -1,0 +1,46 @@
+<div class="h-full flex items-center justify-between px-4 md:px-8">
+  
+  <!-- Song Info -->
+  <div class="flex items-center min-w-0 flex-1 md:flex-none md:w-64">
+    @if (currentSong) {
+      <div class="truncate">
+        <p class="font-semibold text-sm md:text-base truncate">{{ currentSong.title }}</p>
+        <p class="text-xs md:text-sm text-gray-400 truncate">{{ currentSong.artistName }}</p>
+      </div>
+    } @else {
+      <div>
+        <p class="font-semibold text-sm">No Song Playing</p>
+        <p class="text-xs text-gray-400">Select a song</p>
+      </div>
+    }
+  </div>
+
+  <!-- Controls -->
+  <div class="flex items-center justify-center gap-4 md:gap-6 flex-1">
+    <button (click)="previous()" class="text-white text-lg md:text-xl hover:text-spotify transition">
+      ⏮
+    </button>
+
+    <button (click)="toggle()" class="bg-white text-black rounded-full w-10 h-10 md:w-12 md:h-12 flex items-center justify-center hover:scale-105 transition shadow-lg">
+      @if (isPlaying) {
+        <span class="text-xs md:text-sm">❚❚</span>
+      } @else {
+        <span class="ml-1 text-sm md:text-base">▶</span>
+      }
+    </button>
+
+    <button (click)="next()" class="text-white text-lg md:text-xl hover:text-spotify transition">
+      ⏭
+    </button>
+  </div>
+
+  <!-- Volume (Hidden on Mobile) -->
+  <div class="hidden md:flex items-center gap-3 w-64 justify-end">
+    <button (click)="toggleMute()" class="text-white hover:text-spotify transition">
+      @if (volume === 0) { 🔇 } @else { 🔊 }
+    </button>
+    <input type="range" min="0" max="1" step="0.01" [value]="volume" (input)="changeVolume($event)"
+      class="w-24 accent-spotify h-1 rounded-lg cursor-pointer" />
+  </div>
+
+</div>

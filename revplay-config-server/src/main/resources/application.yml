@@ -1,0 +1,38 @@
+server:
+  port: 8888
+
+spring:
+
+  application:
+    name: CONFIG-SERVER
+
+  profiles:
+    active: native
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/Dharam8218/revplay-config
+          clone-on-start: true
+          default-label: main
+          timeout: 5
+          basedir: F:/config-repo-temp
+        native:
+          search-locations: file:f:/springrev/Revplay-Microservice/config-repo/
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: false
+
+logging:
+  level:
+    org.springframework.cloud.config: DEBUG
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

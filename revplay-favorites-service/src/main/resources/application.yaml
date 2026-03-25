@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: FAVORITES-SERVICE
+
+  config:
+    import: optional:configserver:http://localhost:8888
+
+  profiles:
+    active: local
+
+  datasource:
+    username: root
+    password: Aishu@123
+    url: jdbc:mysql://localhost:3306/revplay_favorites_db?createDatabaseIfNotExist=true&zeroDateTimeBehavior=convertToNull
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  cloud:
+    config:
+      fail-fast: true
+      retry:
+        initial-interval: 2000
+        max-attempts: 10

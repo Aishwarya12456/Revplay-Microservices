@@ -1,0 +1,50 @@
+<div class="h-full flex items-center justify-between px-4 md:px-6">
+  
+  <!-- Mobile Hamburger Menu -->
+  <button (click)="sidebarService.toggle()" class="md:hidden text-gray-400 hover:text-white mr-4">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  </button>
+
+  <div class="flex items-center gap-4 flex-1 min-w-0">
+    <!-- Search (hidden on very small screens, smaller on mobile) -->
+    <input type="text" placeholder="Search..." (keyup.enter)="goToSearch(searchInput.value)" #searchInput
+      class="hidden sm:block bg-surfaceLight px-4 py-2 rounded-full focus:outline-none w-32 md:w-64 lg:w-96 text-sm truncate" />
+
+    <!-- Browse Genre (hidden on small screens) -->
+    <select (change)="navigateToGenre($event)" class="hidden lg:block bg-surfaceDark text-white px-3 py-2 rounded-md text-sm">
+      <option value="">Genre</option>
+      @for (g of genres; track g) {
+        <option [value]="g">{{ g.replace('_', ' ') }}</option>
+      }
+    </select>
+
+    <!-- Browse More (hidden on small screens) -->
+    <select (change)="navigateToBrowse($event)" class="hidden sm:block bg-surfaceDark text-white px-3 py-2 rounded-md text-sm">
+      <option value="">Browse</option>
+      <option value="artist">By Artist</option>
+      <option value="album">By Album</option>
+    </select>
+  </div>
+
+  <!-- Profile Button -->
+  <div class="flex items-center gap-2 ml-4">
+    @if (!authService.isLoggedIn()) {
+      <button routerLink="/login" class="bg-spotify px-4 py-2 rounded-full text-black font-semibold text-sm hover:opacity-80">
+        Login
+      </button>
+    }
+
+    @if (authService.isLoggedIn()) {
+      <div class="flex items-center gap-2">
+        <span routerLink="/profile" class="text-spotify cursor-pointer hover:underline text-sm truncate max-w-[80px] md:max-w-none">
+          {{ username }}
+        </span>
+        <button class="bg-red-600 px-3 py-1 rounded text-white text-xs hover:bg-red-700" (click)="logout()">
+          Logout
+        </button>
+      </div>
+    }
+  </div>
+</div>

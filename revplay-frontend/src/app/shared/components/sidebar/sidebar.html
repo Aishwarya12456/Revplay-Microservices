@@ -1,0 +1,47 @@
+<div class="h-full p-6 flex flex-col relative">
+
+   <!-- Mobile Close Button -->
+   <button (click)="sidebarService.close()" class="md:hidden absolute top-4 right-4 text-gray-400 hover:text-white">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+   </button>
+
+   <h1 class="text-2xl font-bold text-spotify mb-8">
+      RevPlay
+   </h1>
+
+   <nav class="space-y-4 text-gray-300">
+
+      <a routerLink="/library" (click)="sidebarService.close()" class="block hover:text-white transition">
+         Library
+      </a>
+
+      <a routerLink="/favorites" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="sidebarService.close()"
+         class="block hover:text-white transition">
+         Favorites
+      </a>
+
+      <a routerLink="/playlists" routerLinkActive="text-white" [routerLinkActiveOptions]="{ exact: true }" (click)="sidebarService.close()"
+         class="block hover:text-white transition">
+         Playlists
+      </a>
+
+      <a routerLink="/history" (click)="sidebarService.close()" class="block hover:text-white transition">
+         History
+      </a>
+
+      <a routerLink="/artist" (click)="sidebarService.close()" class="block hover:text-white transition">
+         Artist Dashboard
+      </a>
+
+      <a routerLink="/explore" routerLinkActive="text-white" (click)="sidebarService.close()" class="block hover:text-white transition">
+         Explore
+      </a>
+      <a routerLink="/my-stats" (click)="sidebarService.close()" class="block hover:bg-surfaceLight rounded">
+         My Statistics
+      </a>
+
+   </nav>
+
+</div>
