@@ -4,12 +4,12 @@ public class PlaylistSummary {
 
     private Long playlistId;
     private String name;
-    private int followerCount;
-    private int songCount;
+    private Integer followerCount;
+    private Integer songCount;
 
     public PlaylistSummary() {}
 
-    public PlaylistSummary(Long playlistId, String name, int followerCount, int songCount) {
+    public PlaylistSummary(Long playlistId, String name, Integer followerCount, Integer songCount) {
         this.playlistId = playlistId;
         this.name = name;
         this.followerCount = followerCount;
@@ -20,8 +20,8 @@ public class PlaylistSummary {
     public void setPlaylistId(Long playlistId) { this.playlistId = playlistId; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
-    public int getFollowerCount() { return followerCount; }
-    public void setFollowerCount(int followerCount) { this.followerCount = followerCount; }
-    public int getSongCount() { return songCount; }
-    public void setSongCount(int songCount) { this.songCount = songCount; }
+    public Integer getFollowerCount() { return followerCount; }
+    public void setFollowerCount(Integer followerCount) { this.followerCount = followerCount; }
+    public Integer getSongCount() { return songCount; }
+    public void setSongCount(Integer songCount) { this.songCount = songCount; }
 }

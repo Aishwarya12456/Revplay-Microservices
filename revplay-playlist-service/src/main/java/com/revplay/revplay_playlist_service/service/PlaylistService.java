@@ -215,7 +215,7 @@ public class PlaylistService {
         }
 
         if (playlistFollowerRepository.existsByPlaylistIdAndUserId(playlistId, userId)) {
-            throw new RuntimeException("Already following playlist");
+            return;
         }
 
         PlaylistFollower follower = PlaylistFollower.builder()
@@ -225,7 +225,8 @@ public class PlaylistService {
 
         playlistFollowerRepository.save(follower);
 
-        playlist.setFollowerCount(playlist.getFollowerCount() + 1);
+        Integer currentCount = playlist.getFollowerCount() != null ? playlist.getFollowerCount() : 0;
+        playlist.setFollowerCount(currentCount + 1);
 
         playlistRepository.save(playlist);
     }
@@ -237,13 +238,18 @@ public class PlaylistService {
 
         PlaylistFollower follower = playlistFollowerRepository
                 .findByPlaylistIdAndUserId(playlistId, userId)
-                .orElseThrow(() -> new RuntimeException("You are not following this playlist"));
+                .orElse(null);
+        
+        if (follower == null) {
+            return;
+        }
 
         playlistFollowerRepository.delete(follower);
 
         // decrease follower count safely
-        if (playlist.getFollowerCount() > 0) {
-            playlist.setFollowerCount(playlist.getFollowerCount() - 1);
+        Integer currentCount = playlist.getFollowerCount() != null ? playlist.getFollowerCount() : 0;
+        if (currentCount > 0) {
+            playlist.setFollowerCount(currentCount - 1);
             playlistRepository.save(playlist);
         }
     }

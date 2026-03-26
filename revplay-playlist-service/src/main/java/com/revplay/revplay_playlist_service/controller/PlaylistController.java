@@ -152,7 +152,7 @@ public class PlaylistController {
     }
 
     @PostMapping("/{playlistId}/follow")
-    @PreAuthorize("hasRole('LISTENER')")
+    @PreAuthorize("hasAnyRole('LISTENER', 'ARTIST')")
     public ResponseEntity<Void> followPlaylist(
             @PathVariable Long playlistId,
             Authentication authentication) {

@@ -24,13 +24,14 @@ public class Playlist {
     @Column(nullable = false)
     private Visibility visibility;
 
-    private int followerCount = 0;
+    @Column(columnDefinition = "integer default 0")
+    private Integer followerCount = 0;
 
     private LocalDateTime createdAt;
 
     public Playlist() {}
 
-    public Playlist(Long id, String name, String description, Long userId, Visibility visibility, int followerCount, LocalDateTime createdAt) {
+    public Playlist(Long id, String name, String description, Long userId, Visibility visibility, Integer followerCount, LocalDateTime createdAt) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -50,7 +51,7 @@ public class Playlist {
         private String description;
         private Long userId;
         private Visibility visibility;
-        private int followerCount;
+        private Integer followerCount;
         private LocalDateTime createdAt;
 
         public PlaylistBuilder id(Long id) { this.id = id; return this; }
@@ -58,7 +59,7 @@ public class Playlist {
         public PlaylistBuilder description(String description) { this.description = description; return this; }
         public PlaylistBuilder userId(Long userId) { this.userId = userId; return this; }
         public PlaylistBuilder visibility(Visibility visibility) { this.visibility = visibility; return this; }
-        public PlaylistBuilder followerCount(int followerCount) { this.followerCount = followerCount; return this; }
+        public PlaylistBuilder followerCount(Integer followerCount) { this.followerCount = followerCount; return this; }
         public PlaylistBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
 
         public Playlist build() {
@@ -76,8 +77,8 @@ public class Playlist {
     public void setUserId(Long userId) { this.userId = userId; }
     public Visibility getVisibility() { return visibility; }
     public void setVisibility(Visibility visibility) { this.visibility = visibility; }
-    public int getFollowerCount() { return followerCount; }
-    public void setFollowerCount(int followerCount) { this.followerCount = followerCount; }
+    public Integer getFollowerCount() { return followerCount; }
+    public void setFollowerCount(Integer followerCount) { this.followerCount = followerCount; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
